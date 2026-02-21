@@ -2,14 +2,20 @@
 const btnReploids = document.querySelector('[data-target="reploids-section"]');
 const btnAffiliation = document.querySelector('[data-target="affiliation-section"]');
 const btnStory = document.querySelector('[data-target="story-section"]');
+const btnTimeline = document.querySelector('[data-target="timeline-section"]');
+const btnX9 = document.querySelector('[data-target="x9-section"]');
 
 const secReploids = document.getElementById('reploids-section');
 const secAffiliation = document.getElementById('affiliation-section');
 const secStory = document.getElementById('story-section');
+const secTimeline = document.getElementById('timeline-section');
+const secX9 = document.getElementById('x9-section');
 
 const gridReploids = document.getElementById('reploids-grid');
 const accordionContainer = document.getElementById('affiliation-accordion');
 const storyContainer = document.getElementById('story-container');
+const timelineContainer = document.getElementById('timeline-container');
+const x9Container = document.getElementById('x9-container');
 
 const modal = document.getElementById('cyber-modal');
 const modalCloseBtn = document.getElementById('modal-close');
@@ -18,18 +24,21 @@ const modalContent = document.querySelector('.modal-content');
 
 // --- 탭 전환 이벤트 ---
 function hideAllSections() {
-    [secReploids, secAffiliation, secStory].forEach(sec => sec.classList.remove('active'));
-    [btnReploids, btnAffiliation, btnStory].forEach(btn => btn.classList.remove('active'));
+    [secReploids, secAffiliation, secStory, secTimeline, secX9].forEach(sec => sec.classList.remove('active'));
+    [btnReploids, btnAffiliation, btnStory, btnTimeline, btnX9].forEach(btn => btn.classList.remove('active'));
 }
 
 btnReploids.addEventListener('click', () => { hideAllSections(); btnReploids.classList.add('active'); secReploids.classList.add('active'); });
 btnAffiliation.addEventListener('click', () => { hideAllSections(); btnAffiliation.classList.add('active'); secAffiliation.classList.add('active'); });
 btnStory.addEventListener('click', () => { hideAllSections(); btnStory.classList.add('active'); secStory.classList.add('active'); });
+btnTimeline.addEventListener('click', () => { hideAllSections(); btnTimeline.classList.add('active'); secTimeline.classList.add('active'); });
+btnX9.addEventListener('click', () => { hideAllSections(); btnX9.classList.add('active'); secX9.classList.add('active'); });
 
 
 // --- 데이터 로컬 필터 상태 ---
 let currentType = 'HUNTER'; // 기본값
 let currentSeries = 'ALL';
+let currentSearch = '';
 
 // --- 레플리로이드 렌더링 (통합) ---
 function renderReploids() {
@@ -47,6 +56,17 @@ function renderReploids() {
     // 2. 시리즈(Series) 필터링
     if (currentSeries !== 'ALL') {
         allData = allData.filter(item => item.appearances && item.appearances.includes(currentSeries));
+    }
+
+    // 3. 통합 검색(Search) 필터링
+    if (currentSearch) {
+        allData = allData.filter(item => {
+            const nameMatch = item.name && item.name.toLowerCase().includes(currentSearch);
+            const engMatch = item.english_name && item.english_name.toLowerCase().includes(currentSearch);
+            const affMatch = item.affiliation && item.affiliation.toLowerCase().includes(currentSearch);
+            const weakMatch = item.weakness && item.weakness.toLowerCase().includes(currentSearch);
+            return nameMatch || engMatch || affMatch || weakMatch;
+        });
     }
 
     gridReploids.innerHTML = '';
@@ -105,6 +125,56 @@ function setupFilters() {
             renderReploids();
         });
     });
+
+    // Search Input 연결
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            currentSearch = e.target.value.toLowerCase().trim();
+            renderReploids();
+        });
+    }
+
+    // Weakness Matrix 연결
+    const btnMatrix = document.getElementById('btn-weakness-matrix');
+    if (btnMatrix) {
+        btnMatrix.addEventListener('click', () => {
+            modalContent.className = 'modal-content cyber-card boss-theme';
+            let matrixHtml = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">';
+
+            const bossesBySeries = {};
+            (window.bossesData || []).forEach(b => {
+                if (!bossesBySeries[b.series]) bossesBySeries[b.series] = [];
+                bossesBySeries[b.series].push(b);
+            });
+
+            for (let s = 1; s <= 8; s++) {
+                const seriesBosses = bossesBySeries[`X${s}`];
+                if (!seriesBosses) continue;
+
+                matrixHtml += `<div style="border: 1px solid rgba(255,0,85,0.3); padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 4px;">
+                    <h3 style="color: var(--secondary-color); border-bottom: 1px dotted rgba(255,0,85,0.5); padding-bottom: 0.5rem; margin-bottom: 0.8rem;">[록맨 X${s}]</h3>
+                    <ul style="list-style: none; font-size: 0.9rem; color: #ccc;">`;
+                seriesBosses.forEach(b => {
+                    matrixHtml += `<li style="margin-bottom: 0.6rem; line-height: 1.4;">
+                        <span style="color:#fff; font-weight: bold;">${b.name}</span> 
+                        <br/><span style="color:var(--text-muted); font-size:0.8rem;">└ 약점:</span> <span style="color:var(--secondary-color);">${b.weakness}</span>
+                    </li>`;
+                });
+                matrixHtml += `</ul></div>`;
+            }
+            matrixHtml += '</div>';
+
+            modalBody.innerHTML = `
+                <h2 class="modal-title" style="color: var(--secondary-color); text-shadow: 0 0 10px var(--secondary-glow);">IRREGULAR WEAKNESS MATRIX</h2>
+                <div class="modal-subtitle">시리즈별 보스 상성 데이터베이스</div>
+                <div style="margin-top: 1.5rem; max-height: 50vh; overflow-y: auto; padding-right: 10px;" class="custom-scroll">
+                    ${matrixHtml}
+                </div>
+            `;
+            openModal();
+        });
+    }
 }
 
 
@@ -117,10 +187,14 @@ function closeModal() {
     modal.classList.add('hidden');
     modalContent.className = 'modal-content cyber-card'; // 클래스 초기화
 }
+window.closeModal = closeModal; // 전역 노출
 
-modalCloseBtn.addEventListener('click', closeModal);
+// Event Delegation for modal close
 modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
+    // 닫기 버튼을 클릭하거나, 모달 바깥 배경을 클릭했을 때 닫음
+    if (e.target.closest('.close-btn') || e.target === modal) {
+        closeModal();
+    }
 });
 
 function openHunterModal(char) {
@@ -361,6 +435,108 @@ function renderAffiliations() {
 }
 
 
+// --- SFX System Removed per Feedback ---
+
+// --- 3D Tilt Effect removed based on user feedback ---
+
+// --- 세계관 연혁 랜더링 (Vertical Timeline) ---
+function renderTimeline() {
+    timelineContainer.innerHTML = '';
+    const tlData = window.timelineData || [];
+
+    tlData.forEach(item => {
+        const itemHtml = `
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content cyber-card">
+                    <span class="timeline-era" style="color: var(--secondary-color); font-weight: bold; font-family: var(--font-en);">${item.era}</span>
+                    <h3 style="margin-top: 0.5rem; margin-bottom: 0.5rem; color: var(--primary-color);">[${item.series}] ${item.title}</h3>
+                    <p style="color: #ccc; line-height: 1.6; font-size: 0.95rem;">${item.desc}</p>
+                </div>
+            </div>
+        `;
+        timelineContainer.insertAdjacentHTML('beforeend', itemHtml);
+    });
+}
+
+// --- X9 전용 랜더링 ---
+function renderX9() {
+    x9Container.innerHTML = '';
+    const x9 = window.x9Data || [];
+
+    const sectionTitle = document.querySelector('#x9-section .section-title');
+    if (sectionTitle) {
+        sectionTitle.classList.add('x9-glitch-title');
+    }
+
+    x9.forEach(item => {
+        const itemHtml = `
+            <div class="cyber-card x9-card-special" style="margin-bottom: 0;">
+                <div style="font-family: var(--font-en); color: var(--secondary-color); margin-bottom: 0.5rem; font-size: 0.8rem; letter-spacing: 2px;">
+                    ${item.chapter}
+                </div>
+                <h3 style="color: #fff; margin-bottom: 1rem; border-bottom: 1px dotted rgba(255,0,85,0.5); padding-bottom: 0.5rem;">${item.title}</h3>
+                <p style="color: #bbb; line-height: 1.5; font-size: 0.9rem;">
+                    ${item.content}
+                </p>
+            </div>
+        `;
+        x9Container.insertAdjacentHTML('beforeend', itemHtml);
+    });
+}
+
+// --- Intro Sequence ---
+function runIntroSequence() {
+    const introOverlay = document.getElementById('intro-sequence');
+    const introText = document.getElementById('intro-text');
+    const introProgress = document.getElementById('intro-progress');
+    const introStatusText = document.getElementById('intro-status-text');
+
+    if (!introOverlay) return;
+
+    if (sessionStorage.getItem('systemBooted')) {
+        introOverlay.style.display = 'none';
+        return;
+    }
+
+    const textToType = "INITIALIZING HUNTER BASE SYSTEM...";
+    let textIdx = 0;
+
+    // Allow user to click to skip intro
+    introOverlay.addEventListener('click', () => {
+        introOverlay.classList.add('hidden');
+        sessionStorage.setItem('systemBooted', 'true');
+    }, { once: true });
+
+    function typeChar() {
+        if (textIdx < textToType.length) {
+            introText.textContent += textToType.charAt(textIdx);
+            textIdx++;
+            setTimeout(typeChar, 40);
+        } else {
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 20;
+                if (progress > 100) progress = 100;
+                introProgress.style.width = `${progress}%`;
+
+                if (progress === 100) {
+                    clearInterval(progressInterval);
+                    introStatusText.textContent = "ACCESS GRANTED. WELCOME, HUNTER.";
+                    introStatusText.style.color = "#00ff88";
+
+                    setTimeout(() => {
+                        introOverlay.classList.add('hidden');
+                        sessionStorage.setItem('systemBooted', 'true');
+                    }, 1200);
+                }
+            }, 100);
+        }
+    }
+
+    setTimeout(typeChar, 500);
+}
+
 // --- 초기화 ---
 document.addEventListener('DOMContentLoaded', () => {
     // 데이터 불러오기 및 렌더링
@@ -369,5 +545,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderReploids();
         renderAffiliations();
         renderStories();
+        renderTimeline();
+        renderX9();
+        runIntroSequence();
     }, 100); // 딜레이로 스크립트 로드 보장
 });
