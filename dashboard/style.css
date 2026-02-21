@@ -1,0 +1,654 @@
+/* CSS Variables (디자인 철학 준수) */
+:root {
+    --primary-color: #00e5ff;
+    --primary-glow: rgba(0, 229, 255, 0.6);
+    --secondary-color: #ff0055;
+    --secondary-glow: rgba(255, 0, 85, 0.6);
+    --tertiary-color: #00ff88;
+    --tertiary-glow: rgba(0, 255, 136, 0.6);
+    --bg-color: #0a0e17;
+    --card-bg: rgba(10, 14, 23, 0.85);
+    --card-border: #1f2b38;
+    --text-main: #e0f2f1;
+    --text-muted: #8492a6;
+
+    --font-en: 'Orbitron', sans-serif;
+    --font-kr: 'Noto Sans KR', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: var(--font-kr);
+    overflow-x: hidden;
+}
+
+/* 사이버틱 배경 & 스캔라인 */
+.cyber-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, #111a24 0%, var(--bg-color) 100%);
+    z-index: -2;
+}
+
+.scanline {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 229, 255, 0.05) 50%, rgba(0, 229, 255, 0.05));
+    background-size: 100% 4px;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+/* Header */
+.cyber-header {
+    text-align: center;
+    padding: 3rem 1rem 2rem;
+    border-bottom: 2px solid var(--primary-color);
+    box-shadow: 0 0 20px var(--primary-glow);
+    background: linear-gradient(to bottom, rgba(0, 229, 255, 0.1), transparent);
+}
+
+.cyber-header h1 {
+    font-family: var(--font-en);
+    font-size: 3rem;
+    color: var(--primary-color);
+    text-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-color);
+    letter-spacing: 5px;
+    margin-bottom: 0.5rem;
+}
+
+.cyber-header .subtitle {
+    font-family: var(--font-en);
+    color: var(--text-muted);
+    letter-spacing: 2px;
+}
+
+/* Container & Nav */
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.cyber-nav {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.tab-btn {
+    background: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    padding: 0.8rem 2rem;
+    font-family: var(--font-kr);
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+}
+
+.tab-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--primary-color);
+    transition: all 0.3s ease;
+    z-index: -1;
+}
+
+.tab-btn:hover::before,
+.tab-btn.active::before {
+    left: 0;
+}
+
+.tab-btn:hover,
+.tab-btn.active {
+    color: var(--bg-color);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+/* Sections */
+.data-section {
+    display: none;
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.data-section.active {
+    display: block;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.section-title {
+    color: var(--primary-color);
+    font-size: 1.8rem;
+    border-left: 4px solid var(--primary-color);
+    padding-left: 1rem;
+    text-shadow: 0 0 5px var(--primary-glow);
+    margin: 0;
+}
+
+/* 2depth Type Filter Bar */
+.type-filter-bar {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    border-bottom: 2px solid rgba(0, 229, 255, 0.2);
+    padding-bottom: 0.8rem;
+    margin-top: 1rem;
+}
+
+.type-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-kr);
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    padding: 0.5rem 1rem;
+    position: relative;
+}
+
+.type-btn:hover {
+    color: var(--primary-color);
+    text-shadow: 0 0 8px var(--primary-glow);
+}
+
+.type-btn.active {
+    color: var(--primary-color);
+    text-shadow: 0 0 10px var(--primary-glow);
+}
+
+.type-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -0.9rem;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--primary-color);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+
+.filter-bar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    padding: 0.4rem 0.8rem;
+    font-family: var(--font-en);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.filter-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.filter-btn.active {
+    background: var(--primary-color);
+    color: var(--bg-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+#bosses-section .filter-btn:hover {
+    border-color: var(--secondary-color);
+    color: var(--secondary-color);
+    box-shadow: 0 0 10px var(--secondary-glow);
+}
+
+#bosses-section .filter-btn.active {
+    background: var(--secondary-color);
+    color: var(--bg-color);
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 10px var(--secondary-glow);
+}
+
+/* 그리드 & 카드 */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+}
+
+.cyber-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    padding: 1.5rem;
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+    /* transition: all을 사용할 경우 창 크기 조절시 width 변경 애니메이션이 모든 카드에서 발생해 버벅임을 유발합니다. */
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.cyber-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    border-bottom: 2px solid var(--primary-color);
+    border-right: 2px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.cyber-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    border-top: 2px solid var(--primary-color);
+    border-left: 2px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.cyber-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary-color);
+    box-shadow: 0 5px 20px rgba(0, 229, 255, 0.2);
+}
+
+.cyber-card:hover::after,
+.cyber-card:hover::before {
+    width: 100%;
+    height: 100%;
+    opacity: 0.3;
+}
+
+.card-header h3 {
+    color: #fff;
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.card-meta {
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-family: var(--font-en);
+}
+
+.card-desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 보스 카드는 위협적인 느낌 */
+.boss-card {
+    border: 1px solid rgba(255, 0, 85, 0.3);
+}
+
+.boss-card::after,
+.boss-card::before {
+    border-color: var(--secondary-color);
+}
+
+.boss-card:hover {
+    border-color: var(--secondary-color);
+    box-shadow: 0 5px 20px rgba(255, 0, 85, 0.2);
+}
+
+.boss-card .card-meta {
+    color: var(--secondary-color);
+}
+
+/* 레플리로이드 카드는 중립적인 초록 테마 */
+.reploid-card {
+    border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.reploid-card::after,
+.reploid-card::before {
+    border-color: var(--tertiary-color);
+}
+
+.reploid-card:hover {
+    border-color: var(--tertiary-color);
+    box-shadow: 0 5px 20px rgba(0, 255, 136, 0.2);
+}
+
+.reploid-card .card-meta {
+    color: var(--tertiary-color);
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 3rem 2rem 2rem;
+    background: rgba(10, 15, 25, 0.95);
+    border: 1px solid var(--primary-color);
+    box-shadow: 0 0 30px rgba(0, 229, 255, 0.3);
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: transparent;
+    border: none;
+    color: var(--primary-color);
+    font-size: 2rem;
+    cursor: pointer;
+    transition: text-shadow 0.3s;
+}
+
+.close-btn:hover {
+    text-shadow: 0 0 10px var(--primary-glow);
+}
+
+/* Modal 내부 디자인 */
+.modal-title {
+    font-size: 2rem;
+    color: #fff;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.modal-subtitle {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    font-family: var(--font-en);
+    letter-spacing: 1px;
+}
+
+.modal-detail-row {
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dotted rgba(255, 255, 255, 0.1);
+}
+
+.modal-label {
+    display: inline-block;
+    width: 100px;
+    color: var(--text-muted);
+}
+
+.modal-value {
+    color: #fff;
+    font-weight: bold;
+}
+
+.modal-story {
+    margin-top: 1.5rem;
+    line-height: 1.6;
+    color: #cbd5e1;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 1rem;
+    border-left: 3px solid var(--primary-color);
+}
+
+.modal-story.boss-story {
+    border-left-color: var(--secondary-color);
+}
+
+.boss-theme .modal-subtitle,
+.boss-theme .modal-value.highlight {
+    color: var(--secondary-color);
+}
+
+.boss-theme {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 30px rgba(255, 0, 85, 0.3);
+}
+
+.boss-theme .close-btn {
+    color: var(--secondary-color);
+}
+
+.reploid-theme .modal-subtitle,
+.reploid-theme .modal-value.highlight {
+    color: var(--tertiary-color);
+}
+
+.reploid-theme {
+    border-color: var(--tertiary-color);
+    box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+}
+
+.reploid-theme .close-btn {
+    color: var(--tertiary-color);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 스크롤바 커스텀 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #00b3cc;
+}
+
+/* ------------------- NEW FEATURES (Affiliation, Story, Images) ------------------- */
+
+/* 모달 이미지 및 헤더 컨테이너 */
+.modal-header-container {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px dotted rgba(255, 255, 255, 0.2);
+    padding-bottom: 1rem;
+}
+
+.modal-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 8px;
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 0 15px var(--primary-glow);
+    object-fit: cover;
+    background-color: var(--bg-color);
+}
+
+.boss-theme .modal-image {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 15px var(--secondary-glow);
+}
+
+.reploid-theme .modal-image {
+    border-color: var(--tertiary-color);
+    box-shadow: 0 0 15px var(--tertiary-glow);
+}
+
+.modal-header-text {
+    flex: 1;
+}
+
+.modal-title {
+    margin-bottom: 0.2rem;
+    border-bottom: none;
+}
+
+/* 소속 아코디언 */
+.accordion-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.accordion-item {
+    border: 1px solid var(--card-border);
+    border-radius: 4px;
+    background: var(--card-bg);
+}
+
+.accordion-header {
+    padding: 1.2rem 1.5rem;
+    background: rgba(0, 229, 255, 0.05);
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    display: flex;
+    justify-content: space-between;
+    transition: all 0.3s;
+}
+
+.accordion-header:hover {
+    background: rgba(0, 229, 255, 0.15);
+    box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.2);
+}
+
+.accordion-header .badge {
+    color: #fff;
+    background-color: var(--primary-color);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    color: var(--bg-color);
+}
+
+.accordion-body {
+    display: none;
+    padding: 1.5rem;
+    border-top: 1px solid var(--primary-color);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.accordion-item.open .accordion-body {
+    display: block;
+    animation: fadeInUp 0.4s ease forwards;
+}
+
+/* 스토리 섹션 */
+.story-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.story-card {
+    background: var(--card-bg);
+    border-left: 4px solid var(--primary-color);
+    padding: 1.5rem;
+    border-radius: 0 4px 4px 0;
+    position: relative;
+}
+
+.story-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    border-bottom: 2px solid var(--primary-color);
+    border-right: 2px solid var(--primary-color);
+}
+
+.story-card h3 {
+    color: #fff;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 5px var(--primary-glow);
+}
+
+.story-meta {
+    color: var(--primary-color);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.story-content {
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.story-content p {
+    margin-bottom: 0.5rem;
+}

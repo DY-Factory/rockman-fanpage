@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rockman X Fanpage Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+KR:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- 데이터 소스 연결 -->
+    <script src="../data/characters.js"></script>
+    <script src="../data/bosses.js"></script>
+    <script src="../data/story.js"></script>
+</head>
+
+<body>
+    <div class="cyber-background"></div>
+    <div class="scanline"></div>
+
+    <header class="cyber-header">
+        <h1>HUNTER BASE DATABASE</h1>
+        <p class="subtitle">IRREGULAR HUNTER & MAVERICK PROFILES</p>
+    </header>
+
+    <main class="dashboard-container">
+        <!-- 네비게이션 탭 -->
+        <nav class="cyber-nav">
+            <button class="tab-btn active" data-target="reploids-section">레플리로이드</button>
+            <button class="tab-btn" data-target="affiliation-section">소속별(Affiliation)</button>
+            <button class="tab-btn" data-target="story-section">시리즈 스토리</button>
+        </nav>
+
+        <!-- 레플리로이드 (통합) 섹션 -->
+        <section id="reploids-section" class="data-section active">
+            <div class="section-header" style="flex-direction: column; align-items: flex-start;">
+                <h2 class="section-title">레플리로이드 데이터베이스</h2>
+
+                <!-- 2depth (Type Filter) -->
+                <div class="type-filter-bar">
+                    <button class="type-btn" data-type="ALL">전체</button>
+                    <button class="type-btn" data-type="IRREGULAR">이레귤러</button>
+                    <button class="type-btn active" data-type="HUNTER">이레귤러 헌터</button>
+                    <button class="type-btn" data-type="REPLOID">레플리로이드</button>
+                </div>
+
+                <!-- Series Filter (X1~X8) -->
+                <div class="filter-bar" style="margin-top: 10px;">
+                    <button class="filter-btn active" data-filter="ALL">ALL SERIES</button>
+                    <button class="filter-btn" data-filter="X1">X1</button>
+                    <button class="filter-btn" data-filter="X2">X2</button>
+                    <button class="filter-btn" data-filter="X3">X3</button>
+                    <button class="filter-btn" data-filter="X4">X4</button>
+                    <button class="filter-btn" data-filter="X5">X5</button>
+                    <button class="filter-btn" data-filter="X6">X6</button>
+                    <button class="filter-btn" data-filter="X7">X7</button>
+                    <button class="filter-btn" data-filter="X8">X8</button>
+                </div>
+            </div>
+            <div id="reploids-grid" class="cards-grid">
+                <!-- JS에서 동적 렌더링 -->
+            </div>
+        </section>
+
+        <!-- 소속(Affiliation) 섹션 -->
+        <section id="affiliation-section" class="data-section">
+            <h2 class="section-title">소속(Affiliation)별 편제 정보</h2>
+            <div id="affiliation-accordion" class="accordion-container">
+                <!-- JS에서 동적 렌더링 -->
+            </div>
+        </section>
+
+        <!-- 스토리 섹션 -->
+        <section id="story-section" class="data-section">
+            <h2 class="section-title">록맨 X 시리즈 스토리록</h2>
+            <div id="story-container" class="story-list-container">
+                <!-- JS에서 동적 렌더링 -->
+            </div>
+        </section>
+    </main>
+
+    <!-- 모달(상세 정보 데상) -->
+    <div id="cyber-modal" class="modal-overlay hidden">
+        <div class="modal-content cyber-card">
+            <button id="modal-close" class="close-btn">&times;</button>
+            <div class="modal-body" id="modal-body">
+                <!-- 모달 내용이 여기에 동적으로 추가됩니다 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
