@@ -1,3 +1,16 @@
+/* 시각적으로 숨김 (a11y 라벨 등) */
+.visually-hidden {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 /* CSS Variables (디자인 철학 준수) */
 :root {
     --primary-color: #00e5ff;
@@ -877,4 +890,350 @@ body {
             transparent 2px,
             rgba(255, 0, 85, 0.05) 3px);
     pointer-events: none;
+}
+
+/* ------------------- REFACTOR: 인라인 스타일 -> 유틸 클래스 ------------------- */
+
+/* X9 탭 보스 컬러 강조 */
+.tab-btn.x9-tab {
+    color: var(--secondary-color);
+    text-shadow: 0 0 5px var(--secondary-glow);
+    border-color: var(--secondary-color);
+}
+
+.tab-btn.x9-tab::before {
+    background: var(--secondary-color);
+}
+
+.tab-btn.x9-tab:hover,
+.tab-btn.x9-tab.active {
+    color: var(--bg-color);
+    box-shadow: 0 0 15px var(--secondary-glow);
+}
+
+/* Reploids 섹션 헤더 */
+.section-header.reploids-header {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.title-search-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.filter-bar.reploids-filter-bar {
+    margin-top: 10px;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.filter-bar.reploids-filter-bar .series-filters {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Weakness Matrix 버튼 */
+.matrix-btn {
+    background: transparent;
+    border: 1px solid var(--secondary-color);
+    color: var(--secondary-color);
+    cursor: pointer;
+    padding: 0.4rem 0.8rem;
+    font-family: var(--font-en);
+    transition: all 0.3s;
+    box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
+}
+
+.matrix-btn:hover {
+    background: rgba(255, 0, 85, 0.15);
+    box-shadow: 0 0 18px rgba(255, 0, 85, 0.4);
+}
+
+/* 카드 메타 라벨 통일 */
+.card-meta-small {
+    font-size: 0.8rem;
+}
+
+/* Section Title 변형 - X9 (보스 컬러) */
+.section-title.boss-title {
+    color: var(--secondary-color);
+    text-shadow: 0 0 10px var(--secondary-glow);
+    border-bottom-color: rgba(255, 0, 85, 0.3);
+}
+
+/* X9 Intro 경고 박스 */
+.x9-intro-warning {
+    color: #ccc;
+    margin-bottom: 2rem;
+    border-left: 3px solid var(--secondary-color);
+    padding-left: 1rem;
+    line-height: 1.6;
+}
+
+/* Weakness Matrix Modal */
+.matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.matrix-card {
+    border: 1px solid rgba(255, 0, 85, 0.3);
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+}
+
+.matrix-card h3 {
+    color: var(--secondary-color);
+    border-bottom: 1px dotted rgba(255, 0, 85, 0.5);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
+}
+
+.matrix-card ul {
+    list-style: none;
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.matrix-card li {
+    margin-bottom: 0.6rem;
+    line-height: 1.4;
+}
+
+.matrix-card .boss-name {
+    color: #fff;
+    font-weight: bold;
+}
+
+.matrix-card .boss-weakness-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.matrix-card .boss-weakness-value {
+    color: var(--secondary-color);
+}
+
+.matrix-modal-title {
+    color: var(--secondary-color);
+    text-shadow: 0 0 10px var(--secondary-glow);
+}
+
+.matrix-scroll-area {
+    margin-top: 1.5rem;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* X9 Card 내부 마이크로 스타일 */
+.x9-card-special .x9-chapter-tag {
+    font-family: var(--font-en);
+    color: var(--secondary-color);
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+}
+
+.x9-card-special h3 {
+    color: #fff;
+    margin-bottom: 1rem;
+    border-bottom: 1px dotted rgba(255, 0, 85, 0.5);
+    padding-bottom: 0.5rem;
+}
+
+.x9-card-special p {
+    color: #bbb;
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+
+/* Timeline 카드 디테일 */
+.timeline-content .timeline-era {
+    color: var(--secondary-color);
+    font-weight: bold;
+    font-family: var(--font-en);
+}
+
+.timeline-content h3 {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.timeline-content p {
+    color: #ccc;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+/* Modal Detail 강조 */
+.modal-list {
+    padding-left: 20px;
+    margin-top: 10px;
+}
+
+/* 카드 안 onclick 제거에 따른 cursor 보정은 .cyber-card 가 이미 cursor:pointer 지정됨 */
+
+/* ------------------- A11Y / Focus ------------------- */
+.tab-btn:focus-visible,
+.type-btn:focus-visible,
+.filter-btn:focus-visible,
+.matrix-btn:focus-visible,
+.cyber-card:focus-visible,
+.accordion-header:focus-visible,
+.cyber-search:focus-visible,
+.close-btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    box-shadow: 0 0 12px var(--primary-glow);
+}
+
+.boss-card:focus-visible,
+.boss-theme .close-btn:focus-visible {
+    outline-color: var(--secondary-color);
+    box-shadow: 0 0 12px var(--secondary-glow);
+}
+
+.reploid-card:focus-visible {
+    outline-color: var(--tertiary-color);
+    box-shadow: 0 0 12px var(--tertiary-glow);
+}
+
+/* ------------------- 반응형 (Mobile) ------------------- */
+@media (max-width: 768px) {
+    .cyber-header {
+        padding: 2rem 1rem 1.5rem;
+    }
+
+    .cyber-header h1 {
+        font-size: 1.8rem;
+        letter-spacing: 3px;
+    }
+
+    .cyber-header .subtitle {
+        font-size: 0.8rem;
+    }
+
+    .dashboard-container {
+        padding: 1rem 0.75rem;
+    }
+
+    /* 가로 스크롤 가능한 탭 바로 변환 */
+    .cyber-nav {
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0.5rem;
+        scrollbar-width: thin;
+    }
+
+    .cyber-nav::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .tab-btn {
+        flex: 0 0 auto;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.95rem;
+        white-space: nowrap;
+    }
+
+    .section-title {
+        font-size: 1.4rem;
+    }
+
+    .type-filter-bar {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .type-btn {
+        font-size: 1rem;
+        padding: 0.4rem 0.6rem;
+    }
+
+    .cards-grid {
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
+    }
+
+    .modal-content {
+        width: 94%;
+        max-height: 88vh;
+        padding: 2.2rem 1.2rem 1.5rem;
+    }
+
+    .modal-header-container {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+
+    .modal-image {
+        width: 100px;
+        height: 100px;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+    }
+
+    .accordion-header {
+        padding: 1rem;
+        font-size: 1.05rem;
+    }
+
+    .matrix-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-bar.reploids-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 480px) {
+    .cyber-header h1 {
+        font-size: 1.4rem;
+        letter-spacing: 2px;
+    }
+
+    .tab-btn {
+        padding: 0.5rem 0.9rem;
+        font-size: 0.85rem;
+    }
+
+    .section-title {
+        font-size: 1.2rem;
+    }
+}
+
+/* prefers-reduced-motion 존중 */
+@media (prefers-reduced-motion: reduce) {
+
+    .data-section,
+    .accordion-item.open .accordion-body,
+    .x9-glitch-title,
+    .hunter-logo,
+    .intro-status {
+        animation: none !important;
+    }
+
+    .cyber-card {
+        transition: none !important;
+    }
 }

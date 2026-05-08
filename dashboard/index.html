@@ -5,11 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rockman X Fanpage Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+KR:wght@300;400;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <!-- 데이터 소스 연결 -->
+    <script src="../data/affiliation-rules.js"></script>
     <script src="../data/characters.js"></script>
     <script src="../data/bosses.js"></script>
     <script src="../data/story.js"></script>
@@ -17,7 +20,7 @@
 
 <body>
     <!-- Intro Sequence -->
-    <div id="intro-sequence" class="intro-overlay">
+    <div id="intro-sequence" class="intro-overlay" role="status" aria-live="polite">
         <div class="intro-content">
             <div class="hunter-logo">H</div>
             <h2 class="typing-text" id="intro-text"></h2>
@@ -38,29 +41,33 @@
 
     <main class="dashboard-container">
         <!-- 네비게이션 탭 -->
-        <nav class="cyber-nav">
-            <button class="tab-btn active" data-target="reploids-section">레플리로이드</button>
-            <button class="tab-btn" data-target="affiliation-section">소속별(Affiliation)</button>
-            <button class="tab-btn" data-target="story-section">시리즈 스토리</button>
-            <button class="tab-btn" data-target="timeline-section">세계관 연혁</button>
-            <button class="tab-btn" data-target="x9-section"
-                style="color: var(--secondary-color); text-shadow: 0 0 5px var(--secondary-glow);">프로젝트 X9</button>
+        <nav class="cyber-nav" role="tablist" aria-label="섹션 탐색">
+            <button class="tab-btn active" data-target="reploids-section" role="tab" aria-selected="true"
+                aria-controls="reploids-section">레플리로이드</button>
+            <button class="tab-btn" data-target="affiliation-section" role="tab" aria-selected="false"
+                aria-controls="affiliation-section">소속별(Affiliation)</button>
+            <button class="tab-btn" data-target="story-section" role="tab" aria-selected="false"
+                aria-controls="story-section">시리즈 스토리</button>
+            <button class="tab-btn" data-target="timeline-section" role="tab" aria-selected="false"
+                aria-controls="timeline-section">세계관 연혁</button>
+            <button class="tab-btn x9-tab" data-target="x9-section" role="tab" aria-selected="false"
+                aria-controls="x9-section">프로젝트 X9</button>
         </nav>
 
         <!-- 레플리로이드 (통합) 섹션 -->
-        <section id="reploids-section" class="data-section active">
-            <div class="section-header" style="flex-direction: column; align-items: flex-start;">
-                <div class="title-search-wrapper"
-                    style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 1rem;">
+        <section id="reploids-section" class="data-section active" role="tabpanel" aria-labelledby="tab-reploids">
+            <div class="section-header reploids-header">
+                <div class="title-search-wrapper">
                     <h2 class="section-title">레플리로이드 데이터베이스</h2>
                     <div class="search-container">
+                        <label for="search-input" class="visually-hidden">검색</label>
                         <input type="text" id="search-input" class="cyber-search"
-                            placeholder="NAME / AFFILIATION / WEAKNESS">
+                            placeholder="NAME / AFFILIATION / WEAKNESS" aria-label="이름·소속·약점 검색">
                     </div>
                 </div>
 
                 <!-- 2depth (Type Filter) -->
-                <div class="type-filter-bar">
+                <div class="type-filter-bar" role="tablist" aria-label="타입 필터">
                     <button class="type-btn" data-type="ALL">전체</button>
                     <button class="type-btn" data-type="IRREGULAR">이레귤러</button>
                     <button class="type-btn active" data-type="HUNTER">이레귤러 헌터</button>
@@ -68,9 +75,8 @@
                 </div>
 
                 <!-- Series Filter (X1~X8) & Utility -->
-                <div class="filter-bar"
-                    style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 1rem;">
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <div class="filter-bar reploids-filter-bar">
+                    <div class="series-filters" role="group" aria-label="시리즈 필터">
                         <button class="filter-btn active" data-filter="ALL">ALL SERIES</button>
                         <button class="filter-btn" data-filter="X1">X1</button>
                         <button class="filter-btn" data-filter="X2">X2</button>
@@ -82,9 +88,7 @@
                         <button class="filter-btn" data-filter="X8">X8</button>
                     </div>
                     <div>
-                        <button id="btn-weakness-matrix" class="matrix-btn"
-                            style="background: transparent; border: 1px solid var(--secondary-color); color: var(--secondary-color); cursor: pointer; padding: 0.4rem 0.8rem; font-family: var(--font-en); transition: all 0.3s; box-shadow: 0 0 10px rgba(255,0,85,0.2);">WEAKNESS
-                            MATRIX</button>
+                        <button id="btn-weakness-matrix" class="matrix-btn" type="button">WEAKNESS MATRIX</button>
                     </div>
                 </div>
             </div>
@@ -94,7 +98,7 @@
         </section>
 
         <!-- 소속(Affiliation) 섹션 -->
-        <section id="affiliation-section" class="data-section">
+        <section id="affiliation-section" class="data-section" role="tabpanel">
             <h2 class="section-title">소속(Affiliation)별 편제 정보</h2>
             <div id="affiliation-accordion" class="accordion-container">
                 <!-- JS에서 동적 렌더링 -->
@@ -102,7 +106,7 @@
         </section>
 
         <!-- 스토리 섹션 -->
-        <section id="story-section" class="data-section">
+        <section id="story-section" class="data-section" role="tabpanel">
             <h2 class="section-title">록맨 X 시리즈 스토리록</h2>
             <div id="story-container" class="story-list-container">
                 <!-- JS에서 동적 렌더링 -->
@@ -110,7 +114,7 @@
         </section>
 
         <!-- 세계관 연혁(Timeline) 섹션 -->
-        <section id="timeline-section" class="data-section">
+        <section id="timeline-section" class="data-section" role="tabpanel">
             <h2 class="section-title">세계관 통합 연혁 시퀀스</h2>
             <div id="timeline-container" class="cyber-timeline">
                 <!-- JS에서 동적 렌더링 -->
@@ -118,14 +122,10 @@
         </section>
 
         <!-- 프로젝트 X9 섹션 -->
-        <section id="x9-section" class="data-section">
-            <h2 class="section-title"
-                style="color: var(--secondary-color); text-shadow: 0 0 10px var(--secondary-glow); border-bottom-color: rgba(255,0,85,0.3);">
-                [CLASSIFIED] 프로젝트 X9: 진실의 조각
-            </h2>
+        <section id="x9-section" class="data-section" role="tabpanel">
+            <h2 class="section-title boss-title">[CLASSIFIED] 프로젝트 X9: 진실의 조각</h2>
             <div class="x9-intro">
-                <p
-                    style="color: #ccc; margin-bottom: 2rem; border-left: 3px solid var(--secondary-color); padding-left: 1rem; line-height: 1.6;">
+                <p class="x9-intro-warning">
                     경고: 본 열람 데이터는 X8 야콥 사태(루미네 붕괴) 이후 발생한 일련의 비공식 레코드이며 정규 부대의 접근이 엄격히 통제되어 있습니다.<br>
                     식별된 신규 이레귤러 변이체: 엘파테르(Elpater) 추적 로그.
                 </p>
@@ -136,10 +136,11 @@
         </section>
     </main>
 
-    <!-- 모달(상세 정보 데상) -->
-    <div id="cyber-modal" class="modal-overlay hidden">
-        <div class="modal-content cyber-card">
-            <button id="modal-close" class="close-btn" onclick="closeModal()" style="z-index: 9999;">&times;</button>
+    <!-- 모달(상세 정보) -->
+    <div id="cyber-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title-anchor"
+        aria-hidden="true">
+        <div class="modal-content cyber-card" tabindex="-1">
+            <button id="modal-close" class="close-btn" type="button" aria-label="닫기">&times;</button>
             <div class="modal-body" id="modal-body">
                 <!-- 모달 내용이 여기에 동적으로 추가됩니다 -->
             </div>

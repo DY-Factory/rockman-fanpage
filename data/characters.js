@@ -1,5 +1,6 @@
 // 록맨 X 시리즈 주요 인물 목록 (이레귤러 헌터, 이레귤러, 레플리로이드)
 // type 필드: 'HUNTER' (이레귤러 헌터), 'IRREGULAR' (이레귤러), 'REPLOID' (일반/기타 레플리로이드)
+// 스키마: { id, name, english_name, type, affiliation, rank, debut, appearances, profile, story_arc?, affiliation_group? }
 const charactersData = [
     {
         id: 'x', name: '엑스', english_name: 'X', type: 'HUNTER', affiliation: '이레귤러 헌터 제17정예부대 대장', rank: 'B급 -> 특A급', debut: '록맨 X', appearances: ['X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'X8'],

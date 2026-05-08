@@ -1,15 +1,31 @@
-// DOM 요소 캐싱
-const btnReploids = document.querySelector('[data-target="reploids-section"]');
-const btnAffiliation = document.querySelector('[data-target="affiliation-section"]');
-const btnStory = document.querySelector('[data-target="story-section"]');
-const btnTimeline = document.querySelector('[data-target="timeline-section"]');
-const btnX9 = document.querySelector('[data-target="x9-section"]');
+// ============================================================================
+// Rockman X Fanpage Dashboard
+// 정적 페이지 단일 스크립트. 데이터는 window.* 글로벌(data/*.js) 에서 읽는다.
+// ============================================================================
 
-const secReploids = document.getElementById('reploids-section');
-const secAffiliation = document.getElementById('affiliation-section');
-const secStory = document.getElementById('story-section');
-const secTimeline = document.getElementById('timeline-section');
-const secX9 = document.getElementById('x9-section');
+// --- 안전 유틸 ---
+// innerHTML에 외부 텍스트를 주입할 때 HTML 특수문자 이스케이프.
+function escapeHtml(value) {
+    if (value === undefined || value === null) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function debounce(fn, wait) {
+    let t;
+    return function (...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), wait);
+    };
+}
+
+// --- DOM 요소 캐싱 ---
+const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+const sections = Array.from(document.querySelectorAll('.data-section'));
 
 const gridReploids = document.getElementById('reploids-grid');
 const accordionContainer = document.getElementById('affiliation-accordion');
@@ -18,480 +34,546 @@ const timelineContainer = document.getElementById('timeline-container');
 const x9Container = document.getElementById('x9-container');
 
 const modal = document.getElementById('cyber-modal');
-const modalCloseBtn = document.getElementById('modal-close');
 const modalBody = document.getElementById('modal-body');
-const modalContent = document.querySelector('.modal-content');
-
-// --- 탭 전환 이벤트 ---
-function hideAllSections() {
-    [secReploids, secAffiliation, secStory, secTimeline, secX9].forEach(sec => sec.classList.remove('active'));
-    [btnReploids, btnAffiliation, btnStory, btnTimeline, btnX9].forEach(btn => btn.classList.remove('active'));
-}
-
-btnReploids.addEventListener('click', () => { hideAllSections(); btnReploids.classList.add('active'); secReploids.classList.add('active'); });
-btnAffiliation.addEventListener('click', () => { hideAllSections(); btnAffiliation.classList.add('active'); secAffiliation.classList.add('active'); });
-btnStory.addEventListener('click', () => { hideAllSections(); btnStory.classList.add('active'); secStory.classList.add('active'); });
-btnTimeline.addEventListener('click', () => { hideAllSections(); btnTimeline.classList.add('active'); secTimeline.classList.add('active'); });
-btnX9.addEventListener('click', () => { hideAllSections(); btnX9.classList.add('active'); secX9.classList.add('active'); });
-
+const modalContent = modal.querySelector('.modal-content');
 
 // --- 데이터 로컬 필터 상태 ---
-let currentType = 'HUNTER'; // 기본값
+let currentType = 'HUNTER';
 let currentSeries = 'ALL';
 let currentSearch = '';
 
-// --- 레플리로이드 렌더링 (통합) ---
-function renderReploids() {
+// 모달 트리거 element 보관 (닫을 때 포커스 복귀)
+let lastFocusedBeforeModal = null;
+
+// ============================================================================
+// 탭 전환 (URL 해시 동기화)
+// ============================================================================
+function activateTab(targetId, options = {}) {
+    const { updateHash = true } = options;
+
+    let matched = false;
+    tabButtons.forEach(btn => {
+        const isActive = btn.dataset.target === targetId;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        if (isActive) matched = true;
+    });
+    sections.forEach(sec => {
+        sec.classList.toggle('active', sec.id === targetId);
+    });
+
+    if (!matched) return false;
+    if (updateHash) {
+        const targetHash = `#${targetId}`;
+        if (location.hash !== targetHash) {
+            history.replaceState(null, '', targetHash);
+        }
+    }
+    return true;
+}
+
+function setupTabs() {
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => activateTab(btn.dataset.target));
+        btn.addEventListener('keydown', (e) => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+            e.preventDefault();
+            const idx = tabButtons.indexOf(btn);
+            const next = e.key === 'ArrowRight'
+                ? tabButtons[(idx + 1) % tabButtons.length]
+                : tabButtons[(idx - 1 + tabButtons.length) % tabButtons.length];
+            next.focus();
+            activateTab(next.dataset.target);
+        });
+    });
+
+    // 초기 진입: URL 해시가 있으면 그 탭, 없으면 기본(레플리로이드)
+    const initial = location.hash.replace('#', '');
+    const fallback = tabButtons[0]?.dataset.target;
+    if (!initial || !activateTab(initial, { updateHash: false })) {
+        if (fallback) activateTab(fallback, { updateHash: false });
+    }
+
+    window.addEventListener('hashchange', () => {
+        const id = location.hash.replace('#', '');
+        if (id) activateTab(id, { updateHash: false });
+    });
+}
+
+// ============================================================================
+// 소속(Affiliation) 정규화 (data/affiliation-rules.js 기반)
+// ============================================================================
+function normalizeAffiliation(item) {
+    if (item.affiliation_group) return item.affiliation_group;
+    const text = item.affiliation;
+    if (!text) return '기타';
+    const rules = window.affiliationRules || [];
+    for (const rule of rules) {
+        if (rule.keywords.some(kw => text.includes(kw))) return rule.group;
+    }
+    return text.trim();
+}
+
+// ============================================================================
+// 카드 빌더 (DOM API 사용 - XSS 안전)
+// ============================================================================
+function getCardThemeClass(item) {
+    if (item.type === 'IRREGULAR') return 'boss-card';
+    if (item.type === 'REPLOID') return 'reploid-card';
+    return '';
+}
+
+function buildPersonCard(item, options = {}) {
+    const { showProfile = true } = options;
+    const isBoss = !!item.series;
+
+    const card = document.createElement('article');
+    card.className = `cyber-card ${getCardThemeClass(item)}`.trim();
+    card.dataset.id = item.id;
+    card.dataset.kind = isBoss ? 'boss' : 'character';
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', `${item.name} 상세 정보 열기`);
+
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    const h3 = document.createElement('h3');
+    h3.textContent = item.name;
+    header.appendChild(h3);
+
+    const meta = document.createElement('div');
+    meta.className = 'card-meta card-meta-small';
+    const cardTypeLabel = isBoss ? `[${item.series}]` : `[${item.type}]`;
+    meta.textContent = `${cardTypeLabel} | ${item.affiliation || '불명'}`;
+    header.appendChild(meta);
+    card.appendChild(header);
+
+    if (showProfile && item.profile) {
+        const desc = document.createElement('div');
+        desc.className = 'card-desc';
+        desc.textContent = item.profile;
+        card.appendChild(desc);
+    }
+    return card;
+}
+
+function findItemById(id, kind) {
+    if (kind === 'boss') return (window.bossesData || []).find(b => b.id === id);
+    return (window.charactersData || []).find(c => c.id === id);
+}
+
+// ============================================================================
+// 레플리로이드 렌더링 (통합)
+// ============================================================================
+function getAllPeople() {
     const characters = window.charactersData || [];
-    // bosses 데이터에는 series 값이 있으니 type을 강제로 IRREGULAR 로 취급
-    const bosses = (window.bossesData || []).map(b => ({ ...b, type: 'IRREGULAR' }));
+    const bosses = window.bossesData || [];
+    return [...characters, ...bosses];
+}
 
-    let allData = [...characters, ...bosses];
+function renderReploids() {
+    let allData = getAllPeople();
 
-    // 1. 타입(Type) 필터링
     if (currentType !== 'ALL') {
         allData = allData.filter(item => item.type === currentType);
     }
 
-    // 2. 시리즈(Series) 필터링
     if (currentSeries !== 'ALL') {
         allData = allData.filter(item => item.appearances && item.appearances.includes(currentSeries));
     }
 
-    // 3. 통합 검색(Search) 필터링
     if (currentSearch) {
+        const q = currentSearch;
         allData = allData.filter(item => {
-            const nameMatch = item.name && item.name.toLowerCase().includes(currentSearch);
-            const engMatch = item.english_name && item.english_name.toLowerCase().includes(currentSearch);
-            const affMatch = item.affiliation && item.affiliation.toLowerCase().includes(currentSearch);
-            const weakMatch = item.weakness && item.weakness.toLowerCase().includes(currentSearch);
-            return nameMatch || engMatch || affMatch || weakMatch;
+            return (item.name && item.name.toLowerCase().includes(q))
+                || (item.english_name && item.english_name.toLowerCase().includes(q))
+                || (item.affiliation && item.affiliation.toLowerCase().includes(q))
+                || (item.weakness && item.weakness.toLowerCase().includes(q));
         });
     }
 
     gridReploids.innerHTML = '';
-
-    allData.forEach(item => {
-        const isBoss = !!item.series;
-
-        // 카드 테마 결정: IRREGULAR = 빨강(boss-card), REPLOID = 초록(reploid-card), HUNTER = 파랑(기본)
-        let themeClass = '';
-        if (item.type === 'IRREGULAR') themeClass = 'boss-card';
-        else if (item.type === 'REPLOID') themeClass = 'reploid-card';
-
-        const cardTypeLabel = isBoss ? `[${item.series}]` : `[${item.type}]`;
-
-        const card = document.createElement('div');
-        card.className = `cyber-card ${themeClass}`;
-        card.innerHTML = `
-            <div class="card-header">
-                <h3>${item.name}</h3>
-                <div class="card-meta" style="font-size:0.8rem;">
-                    ${cardTypeLabel} | ${item.affiliation || '불명'}
-                </div>
-            </div>
-            <div class="card-desc">${item.profile}</div>
-        `;
-
-        card.addEventListener('click', () => {
-            if (isBoss) openBossModal(item);
-            else openHunterModal(item);
-        });
-
-        gridReploids.appendChild(card);
-    });
+    if (allData.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'empty-state';
+        empty.textContent = '조건에 일치하는 데이터가 없습니다.';
+        empty.style.color = 'var(--text-muted)';
+        gridReploids.appendChild(empty);
+        return;
+    }
+    const frag = document.createDocumentFragment();
+    allData.forEach(item => frag.appendChild(buildPersonCard(item)));
+    gridReploids.appendChild(frag);
 }
 
-// --- 필터 이벤트 연결 ---
+// ============================================================================
+// 필터/검색 이벤트 + Weakness Matrix
+// ============================================================================
 function setupFilters() {
-    // Type Filter 연결
     const typeBtns = document.querySelectorAll('.type-filter-bar .type-btn');
     typeBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
             typeBtns.forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            currentType = e.target.dataset.type;
+            btn.classList.add('active');
+            currentType = btn.dataset.type;
             renderReploids();
         });
     });
 
-    // Series Filter 연결
-    const seriesBtns = document.querySelectorAll('.filter-bar .filter-btn');
+    const seriesBtns = document.querySelectorAll('.series-filters .filter-btn');
     seriesBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
             seriesBtns.forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            currentSeries = e.target.dataset.filter;
+            btn.classList.add('active');
+            currentSeries = btn.dataset.filter;
             renderReploids();
         });
     });
 
-    // Search Input 연결
     const searchInput = document.getElementById('search-input');
     if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            currentSearch = e.target.value.toLowerCase().trim();
+        const onInput = debounce((value) => {
+            currentSearch = value.toLowerCase().trim();
             renderReploids();
-        });
+        }, 180);
+        searchInput.addEventListener('input', (e) => onInput(e.target.value));
     }
 
-    // Weakness Matrix 연결
+    // 그리드 카드 클릭/키보드 위임
+    gridReploids.addEventListener('click', (e) => {
+        const card = e.target.closest('.cyber-card');
+        if (!card || !gridReploids.contains(card)) return;
+        openItemModal(card.dataset.id, card.dataset.kind, card);
+    });
+    gridReploids.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('.cyber-card');
+        if (!card) return;
+        e.preventDefault();
+        openItemModal(card.dataset.id, card.dataset.kind, card);
+    });
+
     const btnMatrix = document.getElementById('btn-weakness-matrix');
     if (btnMatrix) {
-        btnMatrix.addEventListener('click', () => {
-            modalContent.className = 'modal-content cyber-card boss-theme';
-            let matrixHtml = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">';
-
-            const bossesBySeries = {};
-            (window.bossesData || []).forEach(b => {
-                if (!bossesBySeries[b.series]) bossesBySeries[b.series] = [];
-                bossesBySeries[b.series].push(b);
-            });
-
-            for (let s = 1; s <= 8; s++) {
-                const seriesBosses = bossesBySeries[`X${s}`];
-                if (!seriesBosses) continue;
-
-                matrixHtml += `<div style="border: 1px solid rgba(255,0,85,0.3); padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 4px;">
-                    <h3 style="color: var(--secondary-color); border-bottom: 1px dotted rgba(255,0,85,0.5); padding-bottom: 0.5rem; margin-bottom: 0.8rem;">[록맨 X${s}]</h3>
-                    <ul style="list-style: none; font-size: 0.9rem; color: #ccc;">`;
-                seriesBosses.forEach(b => {
-                    matrixHtml += `<li style="margin-bottom: 0.6rem; line-height: 1.4;">
-                        <span style="color:#fff; font-weight: bold;">${b.name}</span> 
-                        <br/><span style="color:var(--text-muted); font-size:0.8rem;">└ 약점:</span> <span style="color:var(--secondary-color);">${b.weakness}</span>
-                    </li>`;
-                });
-                matrixHtml += `</ul></div>`;
-            }
-            matrixHtml += '</div>';
-
-            modalBody.innerHTML = `
-                <h2 class="modal-title" style="color: var(--secondary-color); text-shadow: 0 0 10px var(--secondary-glow);">IRREGULAR WEAKNESS MATRIX</h2>
-                <div class="modal-subtitle">시리즈별 보스 상성 데이터베이스</div>
-                <div style="margin-top: 1.5rem; max-height: 50vh; overflow-y: auto; padding-right: 10px;" class="custom-scroll">
-                    ${matrixHtml}
-                </div>
-            `;
-            openModal();
-        });
+        btnMatrix.addEventListener('click', () => openWeaknessMatrix(btnMatrix));
     }
 }
 
+function openItemModal(id, kind, trigger) {
+    const item = findItemById(id, kind);
+    if (!item) return;
+    if (kind === 'boss') openBossModal(item, trigger);
+    else openHunterModal(item, trigger);
+}
 
-// --- 모달 로직 ---
-function openModal() {
+function openWeaknessMatrix(trigger) {
+    modalContent.className = 'modal-content cyber-card boss-theme';
+
+    const bossesBySeries = {};
+    (window.bossesData || []).forEach(b => {
+        if (!bossesBySeries[b.series]) bossesBySeries[b.series] = [];
+        bossesBySeries[b.series].push(b);
+    });
+
+    let matrixHtml = '<div class="matrix-grid">';
+    for (let s = 1; s <= 8; s++) {
+        const seriesBosses = bossesBySeries[`X${s}`];
+        if (!seriesBosses) continue;
+        matrixHtml += `<div class="matrix-card"><h3>[록맨 X${s}]</h3><ul>`;
+        seriesBosses.forEach(b => {
+            matrixHtml += `<li>
+                <span class="boss-name">${escapeHtml(b.name)}</span>
+                <br/><span class="boss-weakness-label">└ 약점:</span>
+                <span class="boss-weakness-value">${escapeHtml(b.weakness)}</span>
+            </li>`;
+        });
+        matrixHtml += '</ul></div>';
+    }
+    matrixHtml += '</div>';
+
+    modalBody.innerHTML = `
+        <h2 class="modal-title matrix-modal-title" id="modal-title-anchor">IRREGULAR WEAKNESS MATRIX</h2>
+        <div class="modal-subtitle">시리즈별 보스 상성 데이터베이스</div>
+        <div class="matrix-scroll-area custom-scroll">${matrixHtml}</div>
+    `;
+    openModal(trigger);
+}
+
+// ============================================================================
+// 모달 제어 (ESC, 포커스 트랩, ARIA)
+// ============================================================================
+function openModal(triggerEl) {
+    lastFocusedBeforeModal = triggerEl || document.activeElement;
     modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    // 첫 포커스 가능한 요소 또는 콘텐츠 자체로 포커스 이동
+    const focusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    (focusable || modalContent).focus({ preventScroll: true });
 }
 
 function closeModal() {
+    if (modal.classList.contains('hidden')) return;
     modal.classList.add('hidden');
-    modalContent.className = 'modal-content cyber-card'; // 클래스 초기화
+    modal.setAttribute('aria-hidden', 'true');
+    modalContent.className = 'modal-content cyber-card';
+    if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
+        lastFocusedBeforeModal.focus({ preventScroll: true });
+    }
+    lastFocusedBeforeModal = null;
 }
-window.closeModal = closeModal; // 전역 노출
 
-// Event Delegation for modal close
-modal.addEventListener('click', (e) => {
-    // 닫기 버튼을 클릭하거나, 모달 바깥 배경을 클릭했을 때 닫음
-    if (e.target.closest('.close-btn') || e.target === modal) {
-        closeModal();
-    }
-});
+function setupModal() {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal || e.target.closest('#modal-close')) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+    });
+    // 포커스 트랩 (간단)
+    modal.addEventListener('keydown', (e) => {
+        if (e.key !== 'Tab') return;
+        const focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault(); first.focus();
+        }
+    });
+}
 
-function openHunterModal(char) {
-    modalContent.className = 'modal-content cyber-card'; // 초기화
+function avatarUrl(name, type) {
+    let bg = '0a0e17', color = '00e5ff';
+    if (type === 'IRREGULAR') { bg = '1a050d'; color = 'ff0055'; }
+    else if (type === 'REPLOID') { bg = '051a10'; color = '00ff88'; }
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${bg}&color=${color}&size=150&font-size=0.3`;
+}
 
-    // REPLOID(중립)일 경우 초록 테마 적용
-    if (char.type === 'REPLOID') {
-        modalContent.classList.add('reploid-theme');
-    }
+function openHunterModal(char, trigger) {
+    modalContent.className = 'modal-content cyber-card';
+    if (char.type === 'REPLOID') modalContent.classList.add('reploid-theme');
 
-    // Story Object 처리
     let storyHtml = '';
     if (char.story_arc) {
-        for (let arc in char.story_arc) {
-            storyHtml += `<li><strong>${arc}:</strong> ${char.story_arc[arc]}</li>`;
+        for (const arc in char.story_arc) {
+            storyHtml += `<li><strong>${escapeHtml(arc)}:</strong> ${escapeHtml(char.story_arc[arc])}</li>`;
         }
     }
 
-    // 네임태그 생성기 색상 분기 (HUNTER: 파랑, REPLOID: 초록)
-    let avatarBg = '0a0e17';
-    let avatarColor = '00e5ff';
-    if (char.type === 'REPLOID') {
-        avatarBg = '051a10';
-        avatarColor = '00ff88';
-    }
-    const imgUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(char.name)}&background=${avatarBg}&color=${avatarColor}&size=150&font-size=0.3`;
-
+    const imgUrl = avatarUrl(char.name, char.type);
     modalBody.innerHTML = `
         <div class="modal-header-container">
-            <img src="${imgUrl}" alt="${char.name}" class="modal-image">
+            <img src="${imgUrl}" alt="${escapeHtml(char.name)} 프로필 이미지" class="modal-image">
             <div class="modal-header-text">
-                <h2 class="modal-title">${char.name}</h2>
-                <div class="modal-subtitle">${char.english_name}</div>
+                <h2 class="modal-title" id="modal-title-anchor">${escapeHtml(char.name)}</h2>
+                <div class="modal-subtitle">${escapeHtml(char.english_name || '')}</div>
             </div>
         </div>
-        
+
         <div class="modal-detail-row">
             <span class="modal-label">소속:</span>
-            <span class="modal-value">${char.affiliation}</span>
+            <span class="modal-value">${escapeHtml(char.affiliation || '불명')}</span>
         </div>
         <div class="modal-detail-row">
             <span class="modal-label">랭크:</span>
-            <span class="modal-value">${char.rank}</span>
+            <span class="modal-value">${escapeHtml(char.rank || '불명')}</span>
         </div>
         <div class="modal-detail-row">
             <span class="modal-label">첫 등장:</span>
-            <span class="modal-value">${char.debut}</span>
+            <span class="modal-value">${escapeHtml(char.debut || '불명')}</span>
         </div>
-        
+
         <div class="modal-story">
             <strong>[프로필 요약]</strong><br/>
-            ${char.profile}
+            ${escapeHtml(char.profile || '')}
         </div>
-        
-        <div class="modal-story">
-            <strong>[주요 행적]</strong><br/>
-            <ul style="padding-left: 20px; margin-top: 10px;">
-                ${storyHtml}
-            </ul>
-        </div>
-    `;
 
-    openModal();
+        ${storyHtml ? `<div class="modal-story">
+            <strong>[주요 행적]</strong>
+            <ul class="modal-list">${storyHtml}</ul>
+        </div>` : ''}
+    `;
+    openModal(trigger);
 }
 
-function openBossModal(boss) {
+function openBossModal(boss, trigger) {
     modalContent.className = 'modal-content cyber-card boss-theme';
-
-    const imgUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(boss.name)}&background=1a050d&color=ff0055&size=150&font-size=0.25`;
-
+    const imgUrl = avatarUrl(boss.name, 'IRREGULAR');
     modalBody.innerHTML = `
         <div class="modal-header-container">
-            <img src="${imgUrl}" alt="${boss.name}" class="modal-image">
+            <img src="${imgUrl}" alt="${escapeHtml(boss.name)} 프로필 이미지" class="modal-image">
             <div class="modal-header-text">
-                <h2 class="modal-title">${boss.name}</h2>
-                <div class="modal-subtitle">${boss.english_name} - ${boss.title}</div>
+                <h2 class="modal-title" id="modal-title-anchor">${escapeHtml(boss.name)}</h2>
+                <div class="modal-subtitle">${escapeHtml(boss.english_name || '')} - ${escapeHtml(boss.title || '')}</div>
             </div>
         </div>
-        
+
         <div class="modal-detail-row">
             <span class="modal-label">출현작:</span>
-            <span class="modal-value">록맨 ${boss.series}</span>
+            <span class="modal-value">록맨 ${escapeHtml(boss.series)}</span>
         </div>
         <div class="modal-detail-row">
             <span class="modal-label">소속:</span>
-            <span class="modal-value">${boss.affiliation}</span>
+            <span class="modal-value">${escapeHtml(boss.affiliation || '불명')}</span>
         </div>
         <div class="modal-detail-row">
             <span class="modal-label">약점 무기:</span>
-            <span class="modal-value highlight">${boss.weakness}</span>
+            <span class="modal-value highlight">${escapeHtml(boss.weakness || '불명')}</span>
         </div>
         <div class="modal-detail-row">
             <span class="modal-label">획득 무기:</span>
-            <span class="modal-value">${boss.weapon}</span>
+            <span class="modal-value">${escapeHtml(boss.weapon || '불명')}</span>
         </div>
-        
+
         <div class="modal-story boss-story">
             <strong>[타겟 상세 프로필]</strong><br/>
-            ${boss.profile}
+            ${escapeHtml(boss.profile || '')}
         </div>
     `;
-
-    openModal();
+    openModal(trigger);
 }
 
-// 모달 전역 호출 바인딩 (innerHTML 인라인 클릭용)
-window.openHunterModalByClick = function (id) {
-    const char = window.charactersData.find(c => c.id === id);
-    if (char) openHunterModal(char);
-};
-window.openBossModalByClick = function (id) {
-    const boss = window.bossesData.find(b => b.id === id);
-    if (boss) openBossModal(boss);
-};
-
-// --- 스토리 렌더링 ---
+// ============================================================================
+// 스토리 / 소속 / 타임라인 / X9 렌더링
+// ============================================================================
 function renderStories() {
     if (!window.storyData) return;
     storyContainer.innerHTML = '';
+    const frag = document.createDocumentFragment();
     window.storyData.forEach(st => {
         const div = document.createElement('div');
         div.className = 'story-card';
         div.innerHTML = `
-            <h3>${st.title}</h3>
-            <div class="story-meta"><strong>시대적 배경:</strong> ${st.timeline}</div>
+            <h3>${escapeHtml(st.title)}</h3>
+            <div class="story-meta"><strong>시대적 배경:</strong> ${escapeHtml(st.timeline)}</div>
             <div class="story-content">
-                <p><strong>주요 갈등:</strong> ${st.conflict}</p>
-                <p style="margin-top: 10px;">${st.summary}</p>
-                <div class="story-meta" style="margin-top: 15px;"><strong>주요 인물:</strong> ${st.characters.join(', ')}</div>
+                <p><strong>주요 갈등:</strong> ${escapeHtml(st.conflict)}</p>
+                <p>${escapeHtml(st.summary)}</p>
+                <div class="story-meta"><strong>주요 인물:</strong> ${escapeHtml((st.characters || []).join(', '))}</div>
             </div>
         `;
-        storyContainer.appendChild(div);
+        frag.appendChild(div);
     });
+    storyContainer.appendChild(frag);
 }
 
-// --- 소속(Affiliation) 렌더링 ---
 function renderAffiliations() {
-    const characters = window.charactersData || [];
-    const bosses = (window.bossesData || []).map(b => ({ ...b, type: 'IRREGULAR' }));
-    const allData = [...characters, ...bosses];
+    const allData = getAllPeople();
     const grouped = {};
-
-    // 소속을 정규화/단순화 (예: '전 이레귤러 헌터 제17정예부대 대장' -> '제17정예부대')
-    function normalizeAffiliation(affText) {
-        if (!affText) return '기타';
-        if (affText.includes('17정예부대')) return '제17정예부대';
-        if (affText.includes('0특수부대') || affText.includes('0부대')) return '제0특수부대';
-        if (affText.includes('7공수부대')) return '제7공수부대';
-        if (affText.includes('6함대')) return '제6함대';
-        if (affText.includes('14격투부대')) return '제14격투부대';
-        if (affText.includes('13극지부대')) return '제13극지부대';
-        if (affText.includes('8기갑부대')) return '제8기갑부대';
-        if (affText.includes('4육상부대')) return '제4육상부대';
-        if (affText.includes('9방수부대')) return '제9방수부대';
-        if (affText.includes('헌터 본부') || affText.includes('총사령관')) return '이레귤러 헌터 본부';
-        if (affText.includes('레드 얼럿')) return '레드 얼럿';
-        if (affText.includes('레플리포스') || affText.includes('레플리 에어포스')) return '레플리포스';
-
-        // 특정 소속으로 묶기 애매한 고유명사는 원본 그대로 사용
-        return affText.trim();
-    }
-
     allData.forEach(item => {
-        const aff = normalizeAffiliation(item.affiliation);
+        const aff = normalizeAffiliation(item);
         if (!grouped[aff]) grouped[aff] = [];
         grouped[aff].push(item);
     });
 
     const finalGroups = { '기타(etc)': [] };
-
-    for (let aff in grouped) {
-        if (grouped[aff].length < 2) {
-            finalGroups['기타(etc)'].push(...grouped[aff]);
-        } else {
-            finalGroups[aff] = grouped[aff];
-        }
+    for (const aff in grouped) {
+        if (grouped[aff].length < 2) finalGroups['기타(etc)'].push(...grouped[aff]);
+        else finalGroups[aff] = grouped[aff];
     }
-
-    // 기타 배열이 비어있으면 삭제
     if (finalGroups['기타(etc)'].length === 0) delete finalGroups['기타(etc)'];
 
     accordionContainer.innerHTML = '';
-
-    // 키 정렬: 부대명이 먼저 오고 레플리포스/레드 얼럿 등이 그 뒤, 마지막이 기타
     const sortedKeys = Object.keys(finalGroups).sort((a, b) => {
         if (a === '기타(etc)') return 1;
         if (b === '기타(etc)') return -1;
         return a.localeCompare(b);
     });
 
-    sortedKeys.forEach(aff => {
+    sortedKeys.forEach((aff) => {
         const groupItems = finalGroups[aff];
         const itemDiv = document.createElement('div');
         itemDiv.className = 'accordion-item';
 
-        // 헤더
-        const header = document.createElement('div');
+        const header = document.createElement('button');
+        header.type = 'button';
         header.className = 'accordion-header';
-        header.innerHTML = `<span><span style="color:#fff;">[소속]</span> ${aff}</span> <span class="badge">${groupItems.length}명</span>`;
+        header.setAttribute('aria-expanded', 'false');
+        header.innerHTML = `<span><span style="color:#fff;">[소속]</span> ${escapeHtml(aff)}</span> <span class="badge">${groupItems.length}명</span>`;
 
-        // 바디
         const body = document.createElement('div');
         body.className = 'accordion-body';
+        const grid = document.createElement('div');
+        grid.className = 'cards-grid';
+        groupItems.forEach(person => grid.appendChild(buildPersonCard(person, { showProfile: false })));
+        body.appendChild(grid);
 
-        let cardsHtml = '<div class="cards-grid">';
-        groupItems.forEach(person => {
-            const isBoss = !!person.series;
-
-            let themeClass = '';
-            if (person.type === 'IRREGULAR') themeClass = 'boss-card';
-            else if (person.type === 'REPLOID') themeClass = 'reploid-card';
-
-            // 원본 소속명을 카드 메타 정보에 표기 (상세 식별 목적)
-            const originAff = person.affiliation || '불명';
-            cardsHtml += `
-                <div class="cyber-card ${themeClass}" style="margin-bottom: 0;" onclick="${isBoss ? 'openBossModalByClick' : 'openHunterModalByClick'}('${person.id}')">
-                    <div class="card-header">
-                        <h3>${person.name}</h3>
-                        <div class="card-meta" style="font-size:0.8rem;">
-                            ${isBoss ? `[${person.series}]` : `[X HUNTER]`} | ${originAff}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        cardsHtml += '</div>';
-        body.innerHTML = cardsHtml;
-
-        // 아코디언 토글 이벤트
         header.addEventListener('click', () => {
-            itemDiv.classList.toggle('open');
+            const opened = itemDiv.classList.toggle('open');
+            header.setAttribute('aria-expanded', opened ? 'true' : 'false');
         });
 
         itemDiv.appendChild(header);
         itemDiv.appendChild(body);
         accordionContainer.appendChild(itemDiv);
     });
-}
 
-
-// --- SFX System Removed per Feedback ---
-
-// --- 3D Tilt Effect removed based on user feedback ---
-
-// --- 세계관 연혁 랜더링 (Vertical Timeline) ---
-function renderTimeline() {
-    timelineContainer.innerHTML = '';
-    const tlData = window.timelineData || [];
-
-    tlData.forEach(item => {
-        const itemHtml = `
-            <div class="timeline-item">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content cyber-card">
-                    <span class="timeline-era" style="color: var(--secondary-color); font-weight: bold; font-family: var(--font-en);">${item.era}</span>
-                    <h3 style="margin-top: 0.5rem; margin-bottom: 0.5rem; color: var(--primary-color);">[${item.series}] ${item.title}</h3>
-                    <p style="color: #ccc; line-height: 1.6; font-size: 0.95rem;">${item.desc}</p>
-                </div>
-            </div>
-        `;
-        timelineContainer.insertAdjacentHTML('beforeend', itemHtml);
+    // 아코디언 내부 카드 위임
+    accordionContainer.addEventListener('click', (e) => {
+        const card = e.target.closest('.cyber-card');
+        if (!card || !accordionContainer.contains(card)) return;
+        openItemModal(card.dataset.id, card.dataset.kind, card);
+    });
+    accordionContainer.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('.cyber-card');
+        if (!card) return;
+        e.preventDefault();
+        openItemModal(card.dataset.id, card.dataset.kind, card);
     });
 }
 
-// --- X9 전용 랜더링 ---
+function renderTimeline() {
+    timelineContainer.innerHTML = '';
+    const tlData = window.timelineData || [];
+    const frag = document.createDocumentFragment();
+    tlData.forEach(item => {
+        const wrap = document.createElement('div');
+        wrap.className = 'timeline-item';
+        wrap.innerHTML = `
+            <div class="timeline-dot"></div>
+            <div class="timeline-content cyber-card">
+                <span class="timeline-era">${escapeHtml(item.era)}</span>
+                <h3>[${escapeHtml(item.series)}] ${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.desc)}</p>
+            </div>
+        `;
+        frag.appendChild(wrap);
+    });
+    timelineContainer.appendChild(frag);
+}
+
 function renderX9() {
     x9Container.innerHTML = '';
     const x9 = window.x9Data || [];
 
     const sectionTitle = document.querySelector('#x9-section .section-title');
-    if (sectionTitle) {
-        sectionTitle.classList.add('x9-glitch-title');
-    }
+    if (sectionTitle) sectionTitle.classList.add('x9-glitch-title');
 
+    const frag = document.createDocumentFragment();
     x9.forEach(item => {
-        const itemHtml = `
-            <div class="cyber-card x9-card-special" style="margin-bottom: 0;">
-                <div style="font-family: var(--font-en); color: var(--secondary-color); margin-bottom: 0.5rem; font-size: 0.8rem; letter-spacing: 2px;">
-                    ${item.chapter}
-                </div>
-                <h3 style="color: #fff; margin-bottom: 1rem; border-bottom: 1px dotted rgba(255,0,85,0.5); padding-bottom: 0.5rem;">${item.title}</h3>
-                <p style="color: #bbb; line-height: 1.5; font-size: 0.9rem;">
-                    ${item.content}
-                </p>
-            </div>
+        const card = document.createElement('article');
+        card.className = 'cyber-card x9-card-special';
+        card.innerHTML = `
+            <div class="x9-chapter-tag">${escapeHtml(item.chapter)}</div>
+            <h3>${escapeHtml(item.title)}</h3>
+            <p>${escapeHtml(item.content)}</p>
         `;
-        x9Container.insertAdjacentHTML('beforeend', itemHtml);
+        frag.appendChild(card);
     });
+    x9Container.appendChild(frag);
 }
 
-// --- Intro Sequence ---
+// ============================================================================
+// 인트로 시퀀스
+// ============================================================================
 function runIntroSequence() {
     const introOverlay = document.getElementById('intro-sequence');
     const introText = document.getElementById('intro-text');
     const introProgress = document.getElementById('intro-progress');
     const introStatusText = document.getElementById('intro-status-text');
-
     if (!introOverlay) return;
 
     if (sessionStorage.getItem('systemBooted')) {
@@ -499,10 +581,9 @@ function runIntroSequence() {
         return;
     }
 
-    const textToType = "INITIALIZING HUNTER BASE SYSTEM...";
+    const textToType = 'INITIALIZING HUNTER BASE SYSTEM...';
     let textIdx = 0;
 
-    // Allow user to click to skip intro
     introOverlay.addEventListener('click', () => {
         introOverlay.classList.add('hidden');
         sessionStorage.setItem('systemBooted', 'true');
@@ -519,12 +600,10 @@ function runIntroSequence() {
                 progress += Math.random() * 20;
                 if (progress > 100) progress = 100;
                 introProgress.style.width = `${progress}%`;
-
                 if (progress === 100) {
                     clearInterval(progressInterval);
-                    introStatusText.textContent = "ACCESS GRANTED. WELCOME, HUNTER.";
-                    introStatusText.style.color = "#00ff88";
-
+                    introStatusText.textContent = 'ACCESS GRANTED. WELCOME, HUNTER.';
+                    introStatusText.style.color = '#00ff88';
                     setTimeout(() => {
                         introOverlay.classList.add('hidden');
                         sessionStorage.setItem('systemBooted', 'true');
@@ -533,20 +612,20 @@ function runIntroSequence() {
             }, 100);
         }
     }
-
     setTimeout(typeChar, 500);
 }
 
-// --- 초기화 ---
+// ============================================================================
+// 초기화
+// ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // 데이터 불러오기 및 렌더링
-    setTimeout(() => {
-        setupFilters();
-        renderReploids();
-        renderAffiliations();
-        renderStories();
-        renderTimeline();
-        renderX9();
-        runIntroSequence();
-    }, 100); // 딜레이로 스크립트 로드 보장
+    setupTabs();
+    setupFilters();
+    setupModal();
+    renderReploids();
+    renderAffiliations();
+    renderStories();
+    renderTimeline();
+    renderX9();
+    runIntroSequence();
 });

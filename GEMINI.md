@@ -13,3 +13,13 @@
 - <header class="cyber-header"> 제외하고는 한국어로 사용
 
 ### 로컬라이징 가이드
+- 사용자 노출 텍스트는 모두 한국어로 작성한다. 단 `<header class="cyber-header">` 내부의 영문 타이포그래피("HUNTER BASE DATABASE" 등)는 의도적으로 영문 유지.
+- 캐릭터/보스 한국어 명칭은 정발판/공식 한글 표기를 우선 사용 (예: "엑스" / "제로" / "시그마").
+- `english_name` 필드는 원작 영문 표기 그대로 유지하여 검색·식별 용도로 활용한다.
+- UI 라벨은 한국어, 데이터 필드 키는 영문 snake_case 또는 camelCase로 작성.
+- 새 데이터 추가 시 `affiliation_group`이 명확하면 명시하고, 그렇지 않으면 `data/affiliation-rules.js`의 키워드 룰에 의존한다.
+
+### 데이터 스키마
+- 캐릭터(`data/characters.js`): `{ id, name, english_name, type, affiliation, rank, debut, appearances, profile, story_arc?, affiliation_group? }`
+- 보스(`data/bosses.js`): `{ id, type, name, english_name, title, series, appearances, affiliation, weakness, weapon, profile, affiliation_group? }`
+- 스토리(`data/story.js`): `storyData`, `timelineData`, `x9Data` 세 종류 export.
