@@ -438,6 +438,25 @@ function openBossModal(boss, trigger) {
 // ============================================================================
 // 스토리 / 소속 / 타임라인 / X9 렌더링
 // ============================================================================
+// 분석 메타(analysis)를 카드 하단에 칩 형태로 렌더링.
+// archetypes(시안), motifs(핑크), structure(그린)로 색 구분.
+function renderAnalysisBlock(analysis) {
+    if (!analysis) return '';
+    const chip = (text, type) => `<li class="analysis-chip analysis-chip--${type}">${escapeHtml(text)}</li>`;
+    const archetypeList = (analysis.archetypes || []).map(t => chip(t, 'archetype')).join('');
+    const motifList = (analysis.motifs || []).map(t => chip(t, 'motif')).join('');
+    const structureList = analysis.structure ? chip(analysis.structure, 'structure') : '';
+
+    return `
+        <div class="analysis-block" aria-label="비평 분석 키워드">
+            ${analysis.keyword ? `<div class="analysis-keyword"><span class="analysis-keyword-label">▶ 핵심 키워드</span><span class="analysis-keyword-value">${escapeHtml(analysis.keyword)}</span></div>` : ''}
+            ${archetypeList ? `<div class="analysis-row"><span class="analysis-row-label">원형</span><ul class="analysis-chips">${archetypeList}</ul></div>` : ''}
+            ${motifList ? `<div class="analysis-row"><span class="analysis-row-label">신화·성경</span><ul class="analysis-chips">${motifList}</ul></div>` : ''}
+            ${structureList ? `<div class="analysis-row"><span class="analysis-row-label">서사 구조</span><ul class="analysis-chips">${structureList}</ul></div>` : ''}
+        </div>
+    `;
+}
+
 function renderStories() {
     if (!window.storyData) return;
     storyContainer.innerHTML = '';
@@ -453,6 +472,7 @@ function renderStories() {
                 <p>${escapeHtml(st.summary)}</p>
                 <div class="story-meta"><strong>주요 인물:</strong> ${escapeHtml((st.characters || []).join(', '))}</div>
             </div>
+            ${renderAnalysisBlock(st.analysis)}
         `;
         frag.appendChild(div);
     });
@@ -560,6 +580,7 @@ function renderX9() {
             <div class="x9-chapter-tag">${escapeHtml(item.chapter)}</div>
             <h3>${escapeHtml(item.title)}</h3>
             <p>${escapeHtml(item.content)}</p>
+            ${renderAnalysisBlock(item.analysis)}
         `;
         frag.appendChild(card);
     });
